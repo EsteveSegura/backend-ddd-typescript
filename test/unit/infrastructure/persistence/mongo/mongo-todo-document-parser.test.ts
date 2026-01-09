@@ -17,7 +17,7 @@ describe('MongoTodoDocumentParser', () => {
 
   describe('toDocument', () => {
     test('should convert domain to document', () => {
-      const todo = new Todo({
+      const todo = Todo.reconstitute({
         id: validId,
         title: validTitle,
         description: validDescription,
@@ -37,7 +37,7 @@ describe('MongoTodoDocumentParser', () => {
     });
 
     test('should convert domain with null description', () => {
-      const todo = new Todo({
+      const todo = Todo.reconstitute({
         id: validId,
         title: validTitle,
         createdAt: mockDate,
@@ -50,7 +50,7 @@ describe('MongoTodoDocumentParser', () => {
     });
 
     test('should convert completed todo', () => {
-      const todo = new Todo({
+      const todo = Todo.reconstitute({
         id: validId,
         title: validTitle,
         status: TodoStatus.COMPLETED,
@@ -119,7 +119,7 @@ describe('MongoTodoDocumentParser', () => {
 
   describe('round-trip conversion', () => {
     test('should preserve data through domain -> document -> domain', () => {
-      const originalTodo = new Todo({
+      const originalTodo = Todo.reconstitute({
         id: validId,
         title: validTitle,
         description: validDescription,

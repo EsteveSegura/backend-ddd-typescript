@@ -1,6 +1,7 @@
 import CreateTodo, { CreateTodoCommand } from '../../../../src/application/create_todo';
 import { TodoRepository } from '../../../../src/domain/todo';
 import { IdGenerator } from '../../../../src/domain/services/id-generator';
+import EventBus from '../../../../src/domain/event-bus';
 
 describe('CreateTodo use case', () => {
   const validId = '550e8400-e29b-41d4-a716-446655440000';
@@ -19,14 +20,22 @@ describe('CreateTodo use case', () => {
     generate: jest.fn(),
   };
 
+  const eventBusMock: jest.Mocked<EventBus> = {
+    publish: jest.fn(),
+    subscribe: jest.fn(),
+    unsubscribe: jest.fn(),
+  };
+
   let createTodo: CreateTodo;
 
   beforeEach(() => {
     createTodo = new CreateTodo({
       todoRepository: todoRepositoryMock,
       idGenerator: idGeneratorMock,
+      eventBus: eventBusMock,
     });
     idGeneratorMock.generate.mockReturnValue(validId);
+    eventBusMock.publish.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -75,6 +84,28 @@ describe('CreateTodo use case', () => {
         _title: validTitle,
         _description: validDescription,
       })
+    );
+  });
+
+  test('should publish domain events after saving', async () => {
+    const command = new CreateTodoCommand({
+      title: validTitle,
+      description: validDescription,
+    });
+
+    await createTodo.execute(command);
+
+    expect(eventBusMock.publish).toHaveBeenCalledTimes(1);
+    expect(eventBusMock.publish).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'todo.created',
+          data: expect.objectContaining({
+            todoId: validId,
+            title: validTitle,
+          }),
+        }),
+      ])
     );
   });
 });

@@ -3,7 +3,7 @@ import request from 'supertest';
 import { createContainer, asValue, AwilixContainer } from 'awilix';
 import createTodosController from '../../../../src/infrastructure/rest/todos-controller';
 import errorHandler from '../../../../src/infrastructure/rest/middleware/error-handler';
-import { TodoNotFoundError, InvalidTodoTitleError, TodoStatus } from '../../../../src/domain/todo';
+import { TodoNotFoundError, TodoStatus } from '../../../../src/domain/todo';
 
 describe('TodosController', () => {
   const validId = '550e8400-e29b-41d4-a716-446655440000';
@@ -125,15 +125,27 @@ describe('TodosController', () => {
       expect(body.description).toBeNull();
     });
 
-    test('should return 400 when title is invalid', async () => {
-      createTodoMock.execute.mockRejectedValue(new InvalidTodoTitleError({ title: '' }));
-
+    test('should return 400 when title is empty', async () => {
       const { status, body } = await request(app)
         .post('/api/v1/todos')
         .send({ title: '' });
 
       expect(status).toBe(400);
-      expect(body.error).toBe('InvalidTodoTitle');
+      expect(body.error).toBe('ValidationError');
+      expect(body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining('empty') }),
+        ])
+      );
+    });
+
+    test('should return 400 when title is missing', async () => {
+      const { status, body } = await request(app)
+        .post('/api/v1/todos')
+        .send({});
+
+      expect(status).toBe(400);
+      expect(body.error).toBe('ValidationError');
     });
   });
 
@@ -174,15 +186,27 @@ describe('TodosController', () => {
       expect(body.error).toBe('TodoNotFound');
     });
 
-    test('should return 400 when title is invalid', async () => {
-      updateTodoMock.execute.mockRejectedValue(new InvalidTodoTitleError({ title: '' }));
-
+    test('should return 400 when title is empty', async () => {
       const { status, body } = await request(app)
         .put(`/api/v1/todos/${validId}`)
         .send({ title: '' });
 
       expect(status).toBe(400);
-      expect(body.error).toBe('InvalidTodoTitle');
+      expect(body.error).toBe('ValidationError');
+      expect(body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining('empty') }),
+        ])
+      );
+    });
+
+    test('should return 400 when id is invalid uuid', async () => {
+      const { status, body } = await request(app)
+        .put('/api/v1/todos/invalid-uuid')
+        .send({ title: 'New title' });
+
+      expect(status).toBe(400);
+      expect(body.error).toBe('ValidationError');
     });
   });
 

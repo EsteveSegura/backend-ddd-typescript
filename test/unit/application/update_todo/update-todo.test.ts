@@ -1,5 +1,6 @@
 import UpdateTodo, { UpdateTodoCommand } from '../../../../src/application/update_todo';
 import { Todo, TodoRepository, TodoNotFoundError, TodoStatus } from '../../../../src/domain/todo';
+import EventBus from '../../../../src/domain/event-bus';
 
 describe('UpdateTodo use case', () => {
   const validId = '550e8400-e29b-41d4-a716-446655440000';
@@ -13,12 +14,20 @@ describe('UpdateTodo use case', () => {
     delete: jest.fn(),
   };
 
+  const eventBusMock: jest.Mocked<EventBus> = {
+    publish: jest.fn(),
+    subscribe: jest.fn(),
+    unsubscribe: jest.fn(),
+  };
+
   let updateTodo: UpdateTodo;
 
   beforeEach(() => {
     updateTodo = new UpdateTodo({
       todoRepository: todoRepositoryMock,
+      eventBus: eventBusMock,
     });
+    eventBusMock.publish.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -26,7 +35,7 @@ describe('UpdateTodo use case', () => {
   });
 
   test('should update todo title', async () => {
-    const todoMock = new Todo({ id: validId, title: validTitle });
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
     todoRepositoryMock.findById.mockResolvedValue(todoMock);
 
     const command = new UpdateTodoCommand({
@@ -42,7 +51,7 @@ describe('UpdateTodo use case', () => {
   });
 
   test('should update todo description', async () => {
-    const todoMock = new Todo({ id: validId, title: validTitle });
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
     todoRepositoryMock.findById.mockResolvedValue(todoMock);
 
     const command = new UpdateTodoCommand({
@@ -57,7 +66,7 @@ describe('UpdateTodo use case', () => {
   });
 
   test('should mark todo as completed', async () => {
-    const todoMock = new Todo({ id: validId, title: validTitle });
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
     todoRepositoryMock.findById.mockResolvedValue(todoMock);
 
     const command = new UpdateTodoCommand({
@@ -72,7 +81,7 @@ describe('UpdateTodo use case', () => {
   });
 
   test('should mark todo as pending', async () => {
-    const todoMock = new Todo({
+    const todoMock = Todo.reconstitute({
       id: validId,
       title: validTitle,
       status: TodoStatus.COMPLETED,
@@ -100,5 +109,19 @@ describe('UpdateTodo use case', () => {
 
     await expect(updateTodo.execute(command)).rejects.toThrow(TodoNotFoundError);
     expect(todoRepositoryMock.update).not.toHaveBeenCalled();
+  });
+
+  test('should publish domain events after updating', async () => {
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
+    todoRepositoryMock.findById.mockResolvedValue(todoMock);
+
+    const command = new UpdateTodoCommand({
+      id: validId,
+      title: 'New title',
+    });
+
+    await updateTodo.execute(command);
+
+    expect(eventBusMock.publish).toHaveBeenCalledTimes(1);
   });
 });

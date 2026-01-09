@@ -1,5 +1,6 @@
 import DeleteTodo, { DeleteTodoCommand } from '../../../../src/application/delete_todo';
 import { Todo, TodoRepository, TodoNotFoundError } from '../../../../src/domain/todo';
+import EventBus from '../../../../src/domain/event-bus';
 
 describe('DeleteTodo use case', () => {
   const validId = '550e8400-e29b-41d4-a716-446655440000';
@@ -13,12 +14,20 @@ describe('DeleteTodo use case', () => {
     delete: jest.fn(),
   };
 
+  const eventBusMock: jest.Mocked<EventBus> = {
+    publish: jest.fn(),
+    subscribe: jest.fn(),
+    unsubscribe: jest.fn(),
+  };
+
   let deleteTodo: DeleteTodo;
 
   beforeEach(() => {
     deleteTodo = new DeleteTodo({
       todoRepository: todoRepositoryMock,
+      eventBus: eventBusMock,
     });
+    eventBusMock.publish.mockResolvedValue();
   });
 
   afterEach(() => {
@@ -26,7 +35,7 @@ describe('DeleteTodo use case', () => {
   });
 
   test('should delete todo when found', async () => {
-    const todoMock = new Todo({ id: validId, title: validTitle });
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
     todoRepositoryMock.findById.mockResolvedValue(todoMock);
 
     const command = new DeleteTodoCommand({ id: validId });
@@ -46,5 +55,25 @@ describe('DeleteTodo use case', () => {
     await expect(deleteTodo.execute(command)).rejects.toThrow(TodoNotFoundError);
     expect(todoRepositoryMock.findById).toHaveBeenCalledTimes(1);
     expect(todoRepositoryMock.delete).not.toHaveBeenCalled();
+  });
+
+  test('should publish TodoDeletedEvent after deleting', async () => {
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
+    todoRepositoryMock.findById.mockResolvedValue(todoMock);
+
+    const command = new DeleteTodoCommand({ id: validId });
+    await deleteTodo.execute(command);
+
+    expect(eventBusMock.publish).toHaveBeenCalledTimes(1);
+    expect(eventBusMock.publish).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'todo.deleted',
+          data: expect.objectContaining({
+            todoId: validId,
+          }),
+        }),
+      ])
+    );
   });
 });

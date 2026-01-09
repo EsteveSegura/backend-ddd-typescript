@@ -1,6 +1,12 @@
 import { validate as uuidValidate } from 'uuid';
 import AggregateRoot from '../aggregate-root';
 import { InvalidTodoIdError, InvalidTodoTitleError } from './error';
+import {
+  TodoCreatedEvent,
+  TodoCompletedEvent,
+  TodoUpdatedEvent,
+  TodoMarkedPendingEvent,
+} from './events';
 
 export enum TodoStatus {
   PENDING = 'PENDING',
@@ -33,7 +39,7 @@ export default class Todo extends AggregateRoot {
   private _createdAt: Date;
   private _updatedAt: Date;
 
-  constructor(props: TodoProps) {
+  private constructor(props: TodoProps) {
     super();
     this.id = props.id;
     this.title = props.title;
@@ -41,6 +47,16 @@ export default class Todo extends AggregateRoot {
     this._status = props.status ?? TodoStatus.PENDING;
     this._createdAt = props.createdAt ?? new Date();
     this._updatedAt = props.updatedAt ?? new Date();
+  }
+
+  public static create(props: TodoProps): Todo {
+    const todo = new Todo(props);
+    todo.addEvent(new TodoCreatedEvent(todo.id, todo.title, todo.description));
+    return todo;
+  }
+
+  public static reconstitute(props: TodoProps): Todo {
+    return new Todo(props);
   }
 
   get id(): string {
@@ -90,22 +106,32 @@ export default class Todo extends AggregateRoot {
     if (this._status === TodoStatus.COMPLETED) return;
     this._status = TodoStatus.COMPLETED;
     this._updatedAt = new Date();
+    this.addEvent(new TodoCompletedEvent(this._id, this._updatedAt));
   }
 
   public markPending(): void {
     if (this._status === TodoStatus.PENDING) return;
     this._status = TodoStatus.PENDING;
     this._updatedAt = new Date();
+    this.addEvent(new TodoMarkedPendingEvent(this._id, this._updatedAt));
   }
 
   public update(props: { title?: string; description?: string }): void {
+    const changes: { title?: string; description?: string | null } = {};
+
     if (props.title !== undefined) {
       this.title = props.title;
+      changes.title = props.title;
     }
     if (props.description !== undefined) {
       this.description = props.description;
+      changes.description = this._description;
     }
-    this._updatedAt = new Date();
+
+    if (Object.keys(changes).length > 0) {
+      this._updatedAt = new Date();
+      this.addEvent(new TodoUpdatedEvent(this._id, changes));
+    }
   }
 
   public isCompleted(): boolean {

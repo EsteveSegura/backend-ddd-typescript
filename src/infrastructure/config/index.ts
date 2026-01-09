@@ -6,6 +6,10 @@ export interface Config {
     uri: string;
     dbName: string;
   };
+  logging: {
+    level: string;
+    pretty: boolean;
+  };
 }
 
 const config: Config = {
@@ -15,6 +19,10 @@ const config: Config = {
   mongo: {
     uri: process.env.MONGO_URI || 'mongodb://localhost:27017',
     dbName: process.env.MONGO_DB_NAME || 'todo_ddd',
+  },
+  logging: {
+    level: process.env.LOG_LEVEL || 'info',
+    pretty: process.env.LOG_PRETTY === 'true' || process.env.NODE_ENV !== 'production',
   },
 };
 

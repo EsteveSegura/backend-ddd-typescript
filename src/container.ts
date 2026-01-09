@@ -5,6 +5,12 @@ import { MongoClient } from 'mongodb';
 // Domain services
 import { createIdGenerator } from './domain/services/id-generator';
 
+// Infrastructure - Logging
+import { createLogger } from './infrastructure/logging';
+
+// Infrastructure - Event Bus
+import { InMemoryEventBus } from './infrastructure/event-bus';
+
 // Infrastructure - Persistence
 import MongoDbHandler from './infrastructure/persistence/mongo/mongo-db-handler';
 import MongoTodoDocumentParser from './infrastructure/persistence/mongo/todo/mongo-todo-document-parser';
@@ -26,8 +32,14 @@ container.register({
   uuidv4: asValue(uuidv4),
   mongoClient: asValue(MongoClient),
 
+  // Infrastructure - Logging (singleton)
+  logger: asFunction(createLogger).singleton(),
+
   // Domain services
   idGenerator: asFunction(createIdGenerator).singleton(),
+
+  // Infrastructure - Event Bus (singleton)
+  eventBus: asClass(InMemoryEventBus).singleton(),
 
   // Infrastructure - Persistence (singletons for connection reuse)
   mongoDbHandler: asClass(MongoDbHandler).singleton(),

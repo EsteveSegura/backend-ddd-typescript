@@ -1,17 +1,21 @@
 import { MongoClient, Db } from 'mongodb';
 import config from '../../config';
+import Logger from '../../logging/logger';
 
 export interface MongoDbHandlerDeps {
   mongoClient: typeof MongoClient;
+  logger: Logger;
 }
 
 export default class MongoDbHandler {
   private readonly mongoClient: typeof MongoClient;
+  private readonly logger: Logger;
   private client: MongoClient | null = null;
   private instance: Db | null = null;
 
-  constructor({ mongoClient }: MongoDbHandlerDeps) {
+  constructor({ mongoClient, logger }: MongoDbHandlerDeps) {
     this.mongoClient = mongoClient;
+    this.logger = logger;
   }
 
   private async connect(): Promise<Db> {
@@ -24,10 +28,10 @@ export default class MongoDbHandler {
         { name: 'createdAt_desc' }
       );
 
-      console.log(`Connected to MongoDB: ${config.mongo.dbName}`);
+      this.logger.info('Connected to MongoDB', { database: config.mongo.dbName });
       return db;
     } catch (error) {
-      console.error('Error connecting to MongoDB:', error);
+      this.logger.error('Error connecting to MongoDB', error as Error);
       throw error;
     }
   }
@@ -44,7 +48,7 @@ export default class MongoDbHandler {
       await this.client.close();
       this.client = null;
       this.instance = null;
-      console.log('Disconnected from MongoDB');
+      this.logger.info('Disconnected from MongoDB');
     }
   }
 }

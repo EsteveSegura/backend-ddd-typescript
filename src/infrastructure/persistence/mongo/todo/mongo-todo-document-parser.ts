@@ -16,7 +16,7 @@ export default class MongoTodoDocumentParser implements DocumentParser<TodoDocum
   }
 
   toDomain(document: TodoDocument): Todo {
-    return new Todo({
+    return Todo.reconstitute({
       id: document._id.toString(),
       title: document.title,
       description: document.description ?? undefined,

@@ -26,7 +26,7 @@ describe('GetTodo use case', () => {
   });
 
   test('should return todo when found', async () => {
-    const todoMock = new Todo({ id: validId, title: validTitle });
+    const todoMock = Todo.reconstitute({ id: validId, title: validTitle });
     todoRepositoryMock.findById.mockResolvedValue(todoMock);
 
     const command = new GetTodoCommand({ id: validId });
